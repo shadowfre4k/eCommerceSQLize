@@ -37,46 +37,23 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", (req, res) => {
   // update a category by its `id` value
   Category.update(req.body, {
     where: {
       id: req.params.id,
     },
   })
-    .then((product) => {
-      if (req.body.tagIds && req.body.tagIds.length) {
-        Category.findAll({
-          where: { category_id: req.params.id },
-        }).then((categoryTags) => {
-          // create filtered list of new tag_ids
-          const productTagIds = categoryTags.map(({ tag_id }) => tag_id);
-          const newProductTags = req.body.tagIds
-            .filter((tag_id) => !productTagIds.includes(tag_id))
-            .map((tag_id) => {
-              return {
-                product_id: req.params.id,
-                tag_id,
-              };
-            });
-
-          // figure out which ones to remove
-          const productTagsToRemove = productTags
-            .filter(({ tag_id }) => !req.body.tagIds.includes(tag_id))
-            .map(({ id }) => id);
-          // run both actions
-          return Promise.all([
-            ProductTag.destroy({ where: { id: productTagsToRemove } }),
-            ProductTag.bulkCreate(newProductTags),
-          ]);
-        });
+    .then((dbCategoryData) => {
+      if (!dbCategoryData[0]) {
+        res.status(404).json({ message: "No Category found with this id" });
+        return;
       }
-
-      return res.json(product);
+      res.json(dbCategoryData);
     })
     .catch((err) => {
-      // console.log(err);
-      res.status(400).json(err);
+      console.log(err);
+      res.status(500).json(err);
     });
 });
 
@@ -89,7 +66,7 @@ router.delete("/:id", async (req, res) => {
     if (!categoryData) {
       res.status(404).json({ message: "No Category found with this ID!" });
     }
-    res.status(200).json("Deleted");
+    res.status(200).json(categoryData);
   } catch (err) {
     res.status(500).json(err);
   }
